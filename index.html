@@ -495,34 +495,51 @@ Question: Do you have the business cards as images or physical copies?`
             const sessionKey = document.getElementById('session-key').value.trim();
             
             if (!sessionKey) {
-                showMessage('⚠️ Please enter your Fiverr session key first', 'error');
+                showMessage('⚠️ Please enter your Fiverr auth token first', 'error');
                 return;
             }
             
             const container = document.getElementById('job-container');
             container.innerHTML = '<div class="loading">🔍 Scraping Fiverr buyer requests...</div>';
             
-            // For now, use mock data (real scraping requires backend API)
-            // TODO: Replace with actual API call to backend scraper
-            setTimeout(() => {
-                allJobs = mockJobs;
-                showMessage(`✅ Found ${mockJobs.length} jobs! (Demo mode - showing example jobs)`, 'success');
-                renderJobs();
-            }, 1500);
+            // Call EC2 backend API
+            const API_URL = 'http://13.48.70.12:5000/scrape';
             
-            // Real implementation would be:
-            // try {
-            //     const response = await fetch('/api/scrape', {
-            //         method: 'POST',
-            //         headers: { 'Content-Type': 'application/json' },
-            //         body: JSON.stringify({ sessionKey })
-            //     });
-            //     const data = await response.json();
-            //     allJobs = data.jobs;
-            //     renderJobs();
-            // } catch (error) {
-            //     showMessage('❌ Error fetching jobs: ' + error.message, 'error');
-            // }
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        hodorCreds: sessionKey,
+                        accessToken: sessionKey,
+                        sessionKey: sessionKey
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    allJobs = data.jobs;
+                    const source = data.source === 'fiverr' ? 'live Fiverr data' : 'demo data';
+                    showMessage(`✅ Found ${data.jobs.length} jobs from ${source}!`, 'success');
+                    renderJobs();
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+                
+            } catch (error) {
+                showMessage('❌ Error fetching jobs: ' + error.message, 'error');
+                console.error('Fetch error:', error);
+                
+                // Fallback to mock data
+                allJobs = mockJobs;
+                showMessage('⚠️ Using demo data (API unavailable)', 'error');
+                renderJobs();
+            }
         }
         
         function renderJob(job) {
