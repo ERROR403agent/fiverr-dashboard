@@ -626,12 +626,13 @@ ${job.proposal}
             localStorage.setItem('fiverr_session', e.target.value);
         });
         
-        // Load saved session key
+        // Hardcoded hodor_creds token
+        const HODOR_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJmaXZlcnIvaG9kb3JfcGVnYXN1cyIsInVpZCI6MTEzMzAyNTI2LCJzaWQiOiI2MTc3ZDk3NDgyOTA3NjNiZGM1MDlkMWFkM2Y5MGY5MCIsImlhdCI6MTc3MDk4MzUwNywiZXhwIjoxODAyNTQxMTA3fQ.O9xi8UgNKq-SkrrMljGQ4ZptWf_Vy7Ml9eh9OZOG6Rk';
+        
+        // Load saved session key or use hardcoded
         window.addEventListener('load', () => {
             const saved = localStorage.getItem('fiverr_session');
-            if (saved) {
-                document.getElementById('session-key').value = saved;
-            }
+            document.getElementById('session-key').value = saved || HODOR_TOKEN;
         });
     </script>
 </body>
