@@ -20,6 +20,11 @@ def download_extension():
     """Download the Chrome extension"""
     return send_from_directory('static', 'fiverr-scraper-extension.zip', as_attachment=True)
 
+@app.route('/landing/<page_name>')
+def serve_landing(page_name):
+    """Serve landing pages"""
+    return send_from_directory('landing-pages', f'{page_name}.html')
+
 JOBS_FILE = 'jobs_db.json'
 
 # Store API keys (in production, use environment variables)
