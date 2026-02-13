@@ -20,19 +20,23 @@ config = {
 
 @app.route('/scrape', methods=['POST'])
 def scrape_jobs():
-    """Scrape Fiverr with provided session key"""
+    """Scrape Fiverr with provided auth tokens"""
     try:
         data = request.json
         session_key = data.get('sessionKey', '')
+        access_token = data.get('accessToken', '')
+        hodor_creds = data.get('hodorCreds', '')
         
-        if not session_key:
+        if not session_key and not access_token and not hodor_creds:
             return jsonify({
                 'success': False,
-                'error': 'Session key required'
+                'error': 'Auth token required (access_token or hodor_creds)'
             }), 400
         
         # Try to scrape real Fiverr data
         raw_jobs = scraper.scrape_buyer_requests(
+            access_token=access_token,
+            hodor_creds=hodor_creds,
             fiverr_session_cookie=session_key
         )
         

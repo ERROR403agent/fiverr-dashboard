@@ -132,10 +132,10 @@ Question: Do you have API credentials ready?"""
     
     return templates.get(category, f"Hi! I can help with this project.\n\nPrice: €{budget} | Delivery: {delivery}h")
 
-def scrape_buyer_requests(scraper_api_key=None, fiverr_session_cookie=None):
+def scrape_buyer_requests(scraper_api_key=None, fiverr_session_cookie=None, access_token=None, hodor_creds=None):
     """
     Scrape buyer requests from Fiverr
-    Note: Requires being logged in to see buyer requests
+    Note: Requires auth token or session cookie
     """
     import requests
     from bs4 import BeautifulSoup
@@ -151,7 +151,21 @@ def scrape_buyer_requests(scraper_api_key=None, fiverr_session_cookie=None):
             'Connection': 'keep-alive',
         }
         
+        # Add authorization header if access_token provided
+        if access_token:
+            headers['Authorization'] = f'Bearer {access_token}'
+        
         cookies = {}
+        
+        # Use hodor_creds (long-lived JWT) if available
+        if hodor_creds:
+            cookies['hodor_creds'] = hodor_creds
+        
+        # Use access_token cookie if provided
+        if access_token:
+            cookies['access_token'] = access_token
+        
+        # Fallback to generic session cookie
         if fiverr_session_cookie:
             cookies['session_id'] = fiverr_session_cookie
         
