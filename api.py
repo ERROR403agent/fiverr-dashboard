@@ -5,7 +5,7 @@ Run: python3 api.py
 Then update the dashboard to fetch from http://localhost:5000/jobs
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import scraper
 import json
@@ -14,6 +14,11 @@ from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from the HTML dashboard
+
+@app.route('/download-extension')
+def download_extension():
+    """Download the Chrome extension"""
+    return send_from_directory('static', 'fiverr-scraper-extension.zip', as_attachment=True)
 
 JOBS_FILE = 'jobs_db.json'
 

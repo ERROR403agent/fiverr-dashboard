@@ -20,4 +20,4 @@ Press CTRL+C to quit
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 110-087-741
-127.0.0.1 - - [13/Feb/2026 15:08:26] "POST /add-job HTTP/1.1" 200 -
+13.48.70.12 - - [13/Feb/2026 15:18:43] "HEAD /download-extension HTTP/1.1" 200 -
