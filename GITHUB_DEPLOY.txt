@@ -1,0 +1,42 @@
+🚀 DEPLOY TO GITHUB PAGES - COPY/PASTE THESE COMMANDS
+
+Step 1: Create the repo on GitHub
+─────────────────────────────────
+Go to: https://github.com/new
+
+Settings:
+  Repository name: fiverr-dashboard
+  Public ✓
+  DO NOT initialize with README
+  Click "Create repository"
+
+Step 2: Push your code
+──────────────────────
+Copy your GitHub username, then run:
+
+cd ~/fiverr-dashboard
+git remote add origin https://github.com/YOUR-USERNAME/fiverr-dashboard.git
+git push -u origin main
+
+(Replace YOUR-USERNAME with your actual GitHub username)
+
+Step 3: Enable GitHub Pages
+────────────────────────────
+1. Go to: https://github.com/YOUR-USERNAME/fiverr-dashboard/settings/pages
+2. Under "Source": 
+   - Branch: main
+   - Folder: / (root)
+3. Click "Save"
+4. Wait 30-60 seconds
+
+Step 4: Access your dashboard
+──────────────────────────────
+URL: https://YOUR-USERNAME.github.io/fiverr-dashboard/
+
+Bookmark this on your phone!
+
+═══════════════════════════════════════════════════
+
+Need help? Message me with:
+- Your GitHub username (I'll give you exact commands)
+- OR paste any error messages you see

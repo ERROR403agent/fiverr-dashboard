@@ -137,30 +137,83 @@ def scrape_buyer_requests(scraper_api_key=None, fiverr_session_cookie=None):
     Scrape buyer requests from Fiverr
     Note: Requires being logged in to see buyer requests
     """
-    if scraper_api_key:
-        session.set_scraper_api_key(scraper_api_key)
+    import requests
+    from bs4 import BeautifulSoup
     
-    # Buyer requests URL (requires login)
     url = "https://www.fiverr.com/buyer_requests"
     
     try:
-        # Note: This will only work if you're logged in
-        # You'll need to pass session cookies or use ScraperAPI with authentication
-        response = session.get(url)
-        soup = response.soup
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+        }
+        
+        cookies = {}
+        if fiverr_session_cookie:
+            cookies['session_id'] = fiverr_session_cookie
+        
+        # Use ScraperAPI if provided
+        if scraper_api_key:
+            url = f"http://api.scraperapi.com?api_key={scraper_api_key}&url={url}"
+        
+        response = requests.get(url, headers=headers, cookies=cookies, timeout=15)
+        
+        if response.status_code != 200:
+            print(f"Error: Status {response.status_code}")
+            return []
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
         
         jobs = []
         
-        # This is a placeholder - actual scraping logic depends on Fiverr's HTML structure
-        # You'd need to inspect the buyer requests page and extract:
-        # - Title
-        # - Description  
-        # - Budget
-        # - Posted time
-        # - Category
+        # Try to find buyer request cards
+        # Fiverr's structure may vary, these are common selectors
+        request_cards = soup.find_all('div', class_=['request-card', 'buyer-request', 'offer-card'])
         
-        # For now, return empty to avoid errors
-        return []
+        if not request_cards:
+            # Try alternative selectors
+            request_cards = soup.select('[data-type="buyer-request"]')
+        
+        for idx, card in enumerate(request_cards[:10]):  # Limit to 10 jobs
+            try:
+                # Extract title
+                title_elem = card.find(['h3', 'h4', 'a'], class_=['title', 'request-title'])
+                title = title_elem.get_text(strip=True) if title_elem else f"Request #{idx+1}"
+                
+                # Extract description
+                desc_elem = card.find(['p', 'div'], class_=['description', 'request-description', 'body'])
+                description = desc_elem.get_text(strip=True) if desc_elem else ""
+                
+                # Extract budget
+                budget_elem = card.find(['span', 'div'], class_=['budget', 'price', 'amount'])
+                budget_text = budget_elem.get_text(strip=True) if budget_elem else "0"
+                budget = int(''.join(filter(str.isdigit, budget_text))) or 100
+                
+                # Extract posted time
+                time_elem = card.find(['span', 'time'], class_=['time', 'posted', 'date'])
+                posted = time_elem.get_text(strip=True) if time_elem else "recently"
+                
+                # Extract link
+                link_elem = card.find('a', href=True)
+                link = "https://www.fiverr.com" + link_elem['href'] if link_elem and link_elem['href'].startswith('/') else "https://www.fiverr.com/buyer_requests"
+                
+                if title and description:
+                    jobs.append({
+                        'id': idx + 1,
+                        'title': title,
+                        'description': description[:300],  # Limit length
+                        'budget': budget,
+                        'posted': posted,
+                        'url': link
+                    })
+            except Exception as e:
+                print(f"Error parsing card {idx}: {e}")
+                continue
+        
+        return jobs
         
     except Exception as e:
         print(f"Error scraping: {e}")

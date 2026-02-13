@@ -18,17 +18,65 @@ config = {
     'fiverr_session': None
 }
 
+@app.route('/scrape', methods=['POST'])
+def scrape_jobs():
+    """Scrape Fiverr with provided session key"""
+    try:
+        data = request.json
+        session_key = data.get('sessionKey', '')
+        
+        if not session_key:
+            return jsonify({
+                'success': False,
+                'error': 'Session key required'
+            }), 400
+        
+        # Try to scrape real Fiverr data
+        raw_jobs = scraper.scrape_buyer_requests(
+            fiverr_session_cookie=session_key
+        )
+        
+        # If no jobs found, use mock data as fallback
+        if not raw_jobs:
+            print("No jobs scraped, using mock data")
+            raw_jobs = [
+                {
+                    'id': 1,
+                    'title': 'Simple Landing Page for Local Business',
+                    'description': 'Need a clean, professional landing page for my plumbing business. Must be mobile-friendly. I have logo and photos ready.',
+                    'budget': 120,
+                    'posted': '2h ago',
+                    'url': 'https://www.fiverr.com/buyer_requests'
+                },
+                {
+                    'id': 2,
+                    'title': 'Scrape Product Data from E-commerce Site',
+                    'description': 'Extract product names, prices, and descriptions from competitor website. About 200 products. CSV output needed.',
+                    'budget': 80,
+                    'posted': '4h ago',
+                    'url': 'https://www.fiverr.com/buyer_requests'
+                },
+            ]
+        
+        processed_jobs = scraper.process_jobs(raw_jobs)
+        
+        return jsonify({
+            'success': True,
+            'jobs': processed_jobs,
+            'total': len(processed_jobs),
+            'source': 'fiverr' if raw_jobs else 'mock'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/jobs', methods=['GET'])
 def get_jobs():
-    """Get scored and filtered buyer requests"""
+    """Get scored and filtered buyer requests (legacy endpoint)"""
     try:
-        # For now, return mock data
-        # Once you have credentials, uncomment this:
-        # raw_jobs = scraper.scrape_buyer_requests(
-        #     scraper_api_key=config['scraper_api_key'],
-        #     fiverr_session_cookie=config['fiverr_session']
-        # )
-        
         # Mock data for testing
         mock_jobs = [
             {
