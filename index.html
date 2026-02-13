@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiverr Job Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 10px;
+        }
+        
+        .header {
+            background: #1dbf73;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+        }
+        
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .filters {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        select, input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #1dbf73;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        button:active {
+            background: #19a463;
+        }
+        
+        .job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .job-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+        
+        .job-card.high-score {
+            border-left-color: #1dbf73;
+        }
+        
+        .job-card.medium-score {
+            border-left-color: #ffb33e;
+        }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .job-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            flex: 1;
+        }
+        
+        .score-badge {
+            background: #1dbf73;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .score-badge.medium {
+            background: #ffb33e;
+        }
+        
+        .score-badge.low {
+            background: #95a5a6;
+        }
+        
+        .job-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .job-description {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        
+        .job-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        
+        .tag {
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .job-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-apply {
+            flex: 1;
+            background: #1dbf73;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .btn-skip {
+            background: #e8e8e8;
+            color: #666;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        
+        .proposal-preview {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #555;
+            display: none;
+        }
+        
+        .show-proposal {
+            color: #1dbf73;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Fiverr Job Dashboard</h1>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-value" id="total-jobs">0</span>
+                <span>Total Jobs</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="high-score">0</span>
+                <span>High Score</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="potential-revenue">€0</span>
+                <span>Potential</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="filters">
+        <div class="filter-row">
+            <select id="category-filter">
+                <option value="all">All Categories</option>
+                <option value="website">Website Development</option>
+                <option value="scraping">Web Scraping</option>
+                <option value="writing">Content Writing</option>
+                <option value="data">Data & Research</option>
+                <option value="graphics">Graphics Design</option>
+                <option value="api">API Integration</option>
+            </select>
+            <select id="budget-filter">
+                <option value="all">All Budgets</option>
+                <option value="50-100">€50-€100</option>
+                <option value="100-200">€100-€200</option>
+                <option value="200+">€200+</option>
+            </select>
+        </div>
+        <button onclick="refreshJobs()">🔄 Refresh Jobs</button>
+    </div>
+    
+    <div id="job-container" class="job-list">
+        <div class="loading">Loading jobs...</div>
+    </div>
+
+    <script>
+        // Mock data - will be replaced with API calls
+        const mockJobs = [
+            {
+                id: 1,
+                title: "Simple Landing Page for Local Business",
+                category: "website",
+                budget: 120,
+                description: "Need a clean, professional landing page for my plumbing business. Must be mobile-friendly. I have logo and photos ready.",
+                effort: 2,
+                clarity: 9,
+                posted: "2h ago",
+                tags: ["HTML", "CSS", "Responsive", "Quick Turnaround"],
+                url: "https://www.fiverr.com/buyer_requests"
+            },
+            {
+                id: 2,
+                title: "Scrape Product Data from E-commerce Site",
+                category: "scraping",
+                budget: 80,
+                description: "Extract product names, prices, and descriptions from competitor website. About 200 products. CSV output needed.",
+                effort: 1.5,
+                clarity: 8,
+                posted: "4h ago",
+                tags: ["Python", "Web Scraping", "Data Export"],
+                url: "https://www.fiverr.com/buyer_requests"
+            },
+            {
+                id: 3,
+                title: "Write 5 Blog Posts About Fitness",
+                category: "writing",
+                budget: 150,
+                description: "Need 5 articles, 800 words each, about home workouts and nutrition. SEO optimized. Deadline: 1 week.",
+                effort: 3,
+                clarity: 7,
+                posted: "1h ago",
+                tags: ["Content Writing", "SEO", "Fitness"],
+                url: "https://www.fiverr.com/buyer_requests"
+            },
+            {
+                id: 4,
+                title: "Create Quote Calculator for My Business",
+                category: "website",
+                budget: 200,
+                description: "I'm an electrician and need a simple web app where I can input materials, labor hours, and get PDF quotes for clients.",
+                effort: 3,
+                clarity: 8,
+                posted: "30m ago",
+                tags: ["Web App", "Calculator", "PDF", "Business Tool"],
+                url: "https://www.fiverr.com/buyer_requests"
+            }
+        ];
+        
+        function calculateScore(job) {
+            let score = 0;
+            
+            // Budget scoring (0-40 points)
+            if (job.budget >= 150) score += 40;
+            else if (job.budget >= 100) score += 30;
+            else if (job.budget >= 50) score += 20;
+            
+            // Clarity scoring (0-30 points)
+            score += (job.clarity / 10) * 30;
+            
+            // Effort scoring (0-30 points) - less effort = more points
+            if (job.effort <= 2) score += 30;
+            else if (job.effort <= 3) score += 20;
+            else score += 10;
+            
+            return Math.round(score);
+        }
+        
+        function generateProposal(job) {
+            const proposals = {
+                website: `Hi! I can build your landing page with clean, mobile-responsive design. I'll deliver a professional site that loads fast and looks great on all devices.
+
+My approach:
+1. Design mockup based on your branding
+2. Build responsive HTML/CSS/JS
+3. Optimize for mobile and speed
+
+Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
+
+Question: Do you need any specific features like contact forms or booking systems?`,
+                
+                scraping: `Hi! I can extract that product data cleanly and reliably. I'll deliver a well-structured CSV with all requested fields.
+
+My approach:
+1. Build Python scraper with error handling
+2. Extract and validate all data
+3. Export to clean CSV format
+
+Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
+
+Question: Do you need this as a one-time job or recurring updates?`,
+                
+                writing: `Hi! I can create engaging, SEO-optimized fitness content that resonates with your audience.
+
+My approach:
+1. Research keywords and structure articles
+2. Write clear, actionable content
+3. Optimize for search and readability
+
+Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
+
+Question: Do you have specific keywords or topics in mind for each article?`,
+                
+                api: `Hi! I can integrate those services seamlessly and ensure reliable automation.
+
+My approach:
+1. Set up secure API connections
+2. Build error handling and logging
+3. Test thoroughly and document
+
+Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
+
+Question: Do you have API credentials ready for both services?`
+            };
+            
+            return proposals[job.category] || `Hi! I can help with this project. Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h`;
+        }
+        
+        function renderJob(job) {
+            const score = calculateScore(job);
+            const scoreClass = score >= 70 ? 'high-score' : score >= 50 ? 'medium-score' : '';
+            const badgeClass = score >= 70 ? '' : score >= 50 ? 'medium' : 'low';
+            
+            return `
+                <div class="job-card ${scoreClass}">
+                    <div class="job-header">
+                        <div class="job-title">${job.title}</div>
+                        <div class="score-badge ${badgeClass}">${score}</div>
+                    </div>
+                    <div class="job-meta">
+                        <div class="meta-item">💰 €${job.budget}</div>
+                        <div class="meta-item">⏱️ ${job.effort}h</div>
+                        <div class="meta-item">🕐 ${job.posted}</div>
+                    </div>
+                    <div class="job-description">${job.description}</div>
+                    <div class="job-tags">
+                        ${job.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                    <div class="show-proposal" onclick="toggleProposal(${job.id})">
+                        📝 View Proposal Template
+                    </div>
+                    <div class="proposal-preview" id="proposal-${job.id}">
+                        ${generateProposal(job).replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="job-actions">
+                        <a href="${job.url}" class="btn-apply" target="_blank">Apply on Fiverr</a>
+                        <button class="btn-skip" onclick="skipJob(${job.id})">Skip</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function toggleProposal(jobId) {
+            const proposal = document.getElementById(`proposal-${jobId}`);
+            proposal.style.display = proposal.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function skipJob(jobId) {
+            const job = document.querySelector(`[onclick="skipJob(${jobId})"]`).closest('.job-card');
+            job.style.opacity = '0.3';
+            setTimeout(() => job.remove(), 300);
+            updateStats();
+        }
+        
+        function updateStats() {
+            const jobs = document.querySelectorAll('.job-card');
+            const highScore = Array.from(jobs).filter(j => j.classList.contains('high-score')).length;
+            const totalRevenue = mockJobs.reduce((sum, job) => sum + job.budget, 0);
+            
+            document.getElementById('total-jobs').textContent = jobs.length;
+            document.getElementById('high-score').textContent = highScore;
+            document.getElementById('potential-revenue').textContent = `€${totalRevenue}`;
+        }
+        
+        function filterJobs() {
+            const category = document.getElementById('category-filter').value;
+            const budget = document.getElementById('budget-filter').value;
+            
+            let filtered = mockJobs;
+            
+            if (category !== 'all') {
+                filtered = filtered.filter(job => job.category === category);
+            }
+            
+            if (budget !== 'all') {
+                if (budget === '50-100') filtered = filtered.filter(job => job.budget >= 50 && job.budget < 100);
+                if (budget === '100-200') filtered = filtered.filter(job => job.budget >= 100 && job.budget < 200);
+                if (budget === '200+') filtered = filtered.filter(job => job.budget >= 200);
+            }
+            
+            // Sort by score
+            filtered.sort((a, b) => calculateScore(b) - calculateScore(a));
+            
+            return filtered;
+        }
+        
+        function refreshJobs() {
+            const container = document.getElementById('job-container');
+            container.innerHTML = '<div class="loading">Refreshing...</div>';
+            
+            setTimeout(() => {
+                const filtered = filterJobs();
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No jobs match your filters</div>';
+                } else {
+                    container.innerHTML = filtered.map(renderJob).join('');
+                }
+                
+                updateStats();
+            }, 500);
+        }
+        
+        // Event listeners
+        document.getElementById('category-filter').addEventListener('change', refreshJobs);
+        document.getElementById('budget-filter').addEventListener('change', refreshJobs);
+        
+        // Initial load
+        refreshJobs();
+    </script>
+</body>
+</html>
