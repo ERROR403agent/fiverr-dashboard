@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: -apple-system, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    h2 {
+      margin: 0 0 15px 0;
+      color: #1dbf73;
+      font-size: 18px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #b0b0b0;
+      margin-bottom: 15px;
+    }
+    .status {
+      background: #2a2a2a;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 12px;
+    }
+    .status-ok {
+      color: #1dbf73;
+    }
+    .status-error {
+      color: #ff4444;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .button {
+      background: #1dbf73;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .button:hover {
+      background: #19a463;
+    }
+    .button:active {
+      transform: scale(0.98);
+    }
+    .link {
+      color: #1dbf73;
+      text-decoration: none;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎯 Fiverr Job Scraper</h2>
+  
+  <div class="status">
+    <div id="status-text">⏳ Checking connection...</div>
+  </div>
+  
+  <p>
+    Visit <strong>Fiverr Buyer Requests</strong> and click the green button to extract jobs!
+  </p>
+  
+  <label>
+    <input type="checkbox" id="auto-scrape">
+    Auto-extract on page load
+  </label>
+  
+  <button class="button" id="open-dashboard">Open Dashboard</button>
+  
+  <p style="margin-top: 15px; text-align: center;">
+    <a href="https://www.fiverr.com/buyer_requests" target="_blank" class="link">
+      Go to Buyer Requests →
+    </a>
+  </p>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
