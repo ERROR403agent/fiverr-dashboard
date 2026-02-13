@@ -324,14 +324,14 @@
     </div>
     
     <div class="session-config">
-        <h3>🔑 Fiverr Session Key</h3>
+        <h3>🔑 Fiverr Auth Token</h3>
         <div class="session-input">
-            <input type="password" id="session-key" placeholder="Paste your Fiverr session cookie here...">
+            <input type="password" id="session-key" placeholder="Paste hodor_creds or access_token value here...">
             <button class="btn-fetch" onclick="fetchJobs()">Fetch Jobs</button>
         </div>
         <div class="help-text">
-            How to get it: F12 → Application → Cookies → fiverr.com → Copy session_id value
-            <br>Session expires after logout. Re-enter when needed.
+            How to get it: F12 → Application → Cookies → fiverr.com → Copy <strong>hodor_creds</strong> value (long JWT starting with eyJ...)
+            <br>Token lasts 1 year. Re-enter if expired.
         </div>
     </div>
     
