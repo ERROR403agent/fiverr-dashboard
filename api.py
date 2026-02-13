@@ -8,9 +8,14 @@ Then update the dashboard to fetch from http://localhost:5000/jobs
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import scraper
+import json
+import os
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from the HTML dashboard
+
+JOBS_FILE = 'jobs_db.json'
 
 # Store API keys (in production, use environment variables)
 config = {
@@ -180,11 +185,78 @@ def get_stats():
         'potential_revenue': total_revenue
     })
 
+@app.route('/add-job', methods=['POST'])
+def add_job():
+    """Manually add a job from Fiverr"""
+    try:
+        data = request.json
+        title = data.get('title', '')
+        description = data.get('description', '')
+        budget = int(data.get('budget', 0))
+        
+        if not title or not description:
+            return jsonify({'success': False, 'error': 'Title and description required'}), 400
+        
+        raw_job = {
+            'id': int(datetime.now().timestamp()),
+            'title': title,
+            'description': description,
+            'budget': budget,
+            'posted': 'just now',
+            'url': 'https://www.fiverr.com/buyer_requests'
+        }
+        
+        processed = scraper.process_jobs([raw_job])
+        
+        # Load existing jobs
+        if os.path.exists(JOBS_FILE):
+            with open(JOBS_FILE, 'r') as f:
+                db = json.load(f)
+        else:
+            db = {'jobs': [], 'last_updated': None}
+        
+        # Add new job
+        db['jobs'].extend(processed)
+        db['last_updated'] = datetime.now().isoformat()
+        
+        # Save
+        with open(JOBS_FILE, 'w') as f:
+            json.dump(db, f)
+        
+        return jsonify({
+            'success': True,
+            'job': processed[0] if processed else None
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/jobs-cached', methods=['GET'])
+def get_cached_jobs():
+    """Get jobs from cache"""
+    try:
+        if os.path.exists(JOBS_FILE):
+            with open(JOBS_FILE, 'r') as f:
+                db = json.load(f)
+            return jsonify({
+                'success': True,
+                'jobs': db.get('jobs', []),
+                'last_updated': db.get('last_updated'),
+                'total': len(db.get('jobs', []))
+            })
+        else:
+            return jsonify({'success': True, 'jobs': [], 'total': 0})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("🚀 Fiverr Job API running on http://localhost:5000")
     print("📱 Open your dashboard and it will fetch jobs from this API")
     print("\nEndpoints:")
     print("  GET  /jobs         - Get scored buyer requests")
+    print("  POST /scrape       - Scrape with auth token")
+    print("  POST /add-job      - Manually add a job")
+    print("  GET  /jobs-cached  - Get cached jobs")
     print("  POST /config       - Set API keys")
     print("  GET  /stats        - Get statistics")
     print("\nPress Ctrl+C to stop")

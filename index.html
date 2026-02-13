@@ -324,14 +324,16 @@
     </div>
     
     <div class="session-config">
-        <h3>🔑 Fiverr Auth Token</h3>
+        <h3>➕ Add Job from Fiverr</h3>
         <div class="session-input">
-            <input type="password" id="session-key" placeholder="Paste hodor_creds or access_token value here...">
-            <button class="btn-fetch" onclick="fetchJobs()">Fetch Jobs</button>
+            <input type="text" id="job-title" placeholder="Job title..." style="flex: 2;">
+            <input type="number" id="job-budget" placeholder="Budget €" style="flex: 1;">
         </div>
+        <textarea id="job-description" placeholder="Paste job description here..." style="width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #444; border-radius: 4px; background: #333; color: #e0e0e0; min-height: 80px; font-family: inherit; font-size: 14px;"></textarea>
+        <button class="btn-fetch" onclick="addJob()" style="margin-top: 10px; width: 100%;">Add Job</button>
         <div class="help-text">
-            How to get it: F12 → Application → Cookies → fiverr.com → Copy <strong>hodor_creds</strong> value (long JWT starting with eyJ...)
-            <br>Token lasts 1 year. Re-enter if expired.
+            Copy/paste jobs from Fiverr buyer requests. I'll score them and generate proposals!
+            <br>🔄 Auto-refreshes every hour
         </div>
     </div>
     
@@ -492,29 +494,11 @@ Question: Do you have the business cards as images or physical copies?`
         }
         
         async function fetchJobs() {
-            const sessionKey = document.getElementById('session-key').value.trim();
-            
-            if (!sessionKey) {
-                showMessage('⚠️ Please enter your Fiverr auth token first', 'error');
-                return;
-            }
-            
             const container = document.getElementById('job-container');
-            container.innerHTML = '<div class="loading">🔍 Scraping Fiverr buyer requests...</div>';
-            
-            // Call EC2 backend API
-            const API_URL = 'http://13.48.70.12:5000/scrape';
+            container.innerHTML = '<div class="loading">🔍 Loading jobs...</div>';
             
             try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        hodorCreds: sessionKey,
-                        accessToken: sessionKey,
-                        sessionKey: sessionKey
-                    })
-                });
+                const response = await fetch(`${API_BASE}/jobs-cached`);
                 
                 if (!response.ok) {
                     throw new Error(`API error: ${response.status}`);
@@ -523,21 +507,18 @@ Question: Do you have the business cards as images or physical copies?`
                 const data = await response.json();
                 
                 if (data.success) {
-                    allJobs = data.jobs;
-                    const source = data.source === 'fiverr' ? 'live Fiverr data' : 'demo data';
-                    showMessage(`✅ Found ${data.jobs.length} jobs from ${source}!`, 'success');
+                    allJobs = data.jobs.length > 0 ? data.jobs : mockJobs;
+                    const source = data.jobs.length > 0 ? 'your jobs' : 'demo data';
+                    showMessage(`✅ Loaded ${allJobs.length} ${source}`, 'success');
                     renderJobs();
                 } else {
                     throw new Error(data.error || 'Unknown error');
                 }
                 
             } catch (error) {
-                showMessage('❌ Error fetching jobs: ' + error.message, 'error');
                 console.error('Fetch error:', error);
-                
-                // Fallback to mock data
                 allJobs = mockJobs;
-                showMessage('⚠️ Using demo data (API unavailable)', 'error');
+                showMessage('⚠️ Using demo data', 'error');
                 renderJobs();
             }
         }
@@ -643,13 +624,54 @@ ${job.proposal}
             localStorage.setItem('fiverr_session', e.target.value);
         });
         
-        // Hardcoded hodor_creds token
-        const HODOR_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJmaXZlcnIvaG9kb3JfcGVnYXN1cyIsInVpZCI6MTEzMzAyNTI2LCJzaWQiOiI2MTc3ZDk3NDgyOTA3NjNiZGM1MDlkMWFkM2Y5MGY5MCIsImlhdCI6MTc3MDk4MzUwNywiZXhwIjoxODAyNTQxMTA3fQ.O9xi8UgNKq-SkrrMljGQ4ZptWf_Vy7Ml9eh9OZOG6Rk';
+        const API_BASE = 'http://13.48.70.12:5000';
         
-        // Load saved session key or use hardcoded
+        async function addJob() {
+            const title = document.getElementById('job-title').value.trim();
+            const description = document.getElementById('job-description').value.trim();
+            const budget = parseInt(document.getElementById('job-budget').value) || 0;
+            
+            if (!title || !description || !budget) {
+                showMessage('⚠️ Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/add-job`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description, budget })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(`✅ Job added! Score: ${data.job.score}`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('job-title').value = '';
+                    document.getElementById('job-description').value = '';
+                    document.getElementById('job-budget').value = '';
+                    
+                    // Refresh jobs
+                    fetchJobs();
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showMessage('❌ Error adding job: ' + error.message, 'error');
+            }
+        }
+        
+        // Auto-refresh every hour
+        setInterval(() => {
+            console.log('Auto-refreshing jobs...');
+            fetchJobs();
+        }, 60 * 60 * 1000); // 1 hour
+        
+        // Load jobs on startup
         window.addEventListener('load', () => {
-            const saved = localStorage.getItem('fiverr_session');
-            document.getElementById('session-key').value = saved || HODOR_TOKEN;
+            fetchJobs();
         });
     </script>
 </body>
