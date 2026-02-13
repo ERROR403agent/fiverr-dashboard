@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiverr Scraper Bookmarklet</title>
+    <style>
+        body {
+            font-family: -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 { color: #1dbf73; }
+        .bookmarklet {
+            display: inline-block;
+            background: #1dbf73;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .step {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #1dbf73;
+        }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📥 Fiverr Job Scraper</h1>
+    <p>One-click extraction - works on any mobile browser!</p>
+    
+    <h2>Step 1: Add Bookmark</h2>
+    <div class="step">
+        <p><strong>Drag this button to your bookmarks bar:</strong></p>
+        <a href="javascript:(function(){const API='http://13.48.70.12:5000/add-job';const jobs=[];document.querySelectorAll('article, [class*=request], [class*=card]').forEach((c,i)=>{const t=c.querySelector('h3,h4,h5');const d=c.querySelector('p');const b=c.textContent.match(/\d+/);if(t&&d&&d.textContent.length>20){jobs.push({title:t.textContent.trim().substring(0,200),description:d.textContent.trim().substring(0,500),budget:b?parseInt(b[0]):100})}});if(jobs.length===0){alert('No jobs found on page!');return}let sent=0;jobs.forEach(job=>{fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(job)}).then(r=>r.json()).then(d=>{if(d.success)sent++}).catch(e=>console.error(e))});setTimeout(()=>alert(`Sent ${sent}/${jobs.length} jobs to dashboard!`),2000)})();" class="bookmarklet">
+            📥 Extract Fiverr Jobs
+        </a>
+        
+        <p style="margin-top: 20px;"><strong>On mobile?</strong></p>
+        <ol>
+            <li>Bookmark this page</li>
+            <li>Edit the bookmark</li>
+            <li>Copy the code below and paste as URL:</li>
+        </ol>
+        
+        <textarea readonly style="width: 100%; height: 150px; background: #333; color: #1dbf73; padding: 10px; border: none; border-radius: 4px; font-size: 11px; font-family: monospace;" onclick="this.select()">javascript:(function(){const API='http://13.48.70.12:5000/add-job';const jobs=[];document.querySelectorAll('article, [class*=request], [class*=card]').forEach((c,i)=>{const t=c.querySelector('h3,h4,h5');const d=c.querySelector('p');const b=c.textContent.match(/\d+/);if(t&&d&&d.textContent.length>20){jobs.push({title:t.textContent.trim().substring(0,200),description:d.textContent.trim().substring(0,500),budget:b?parseInt(b[0]):100})}});if(jobs.length===0){alert('No jobs found on page!');return}let sent=0;jobs.forEach(job=>{fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(job)}).then(r=>r.json()).then(d=>{if(d.success)sent++}).catch(e=>console.error(e))});setTimeout(()=>alert(`Sent ${sent}/${jobs.length} jobs to dashboard!`),2000)})();</textarea>
+    </div>
+    
+    <h2>Step 2: Use It</h2>
+    <div class="step">
+        <ol>
+            <li>Go to <a href="https://www.fiverr.com/buyer_requests" style="color: #1dbf73;">Fiverr Buyer Requests</a></li>
+            <li>Tap your bookmarks</li>
+            <li>Tap <strong>"📥 Extract Fiverr Jobs"</strong></li>
+            <li>Jobs sent to dashboard! ✅</li>
+        </ol>
+    </div>
+    
+    <h2>✨ Features</h2>
+    <ul>
+        <li>✅ Works on ANY browser (Chrome, Firefox, Safari, Kiwi, etc.)</li>
+        <li>✅ No extension needed</li>
+        <li>✅ One tap to extract all jobs</li>
+        <li>✅ Instant sync to dashboard</li>
+    </ul>
+    
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="https://error403agent.github.io/fiverr-dashboard/" style="color: #1dbf73;">Open Dashboard →</a>
+    </p>
+</body>
+</html>
