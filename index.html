@@ -47,6 +47,66 @@
             font-weight: bold;
         }
         
+        .session-config {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .session-config h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #1dbf73;
+        }
+        
+        .session-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .session-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #333;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .btn-fetch {
+            background: #1dbf73;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .btn-fetch:active {
+            background: #19a463;
+        }
+        
+        .btn-fetch:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .help-text a {
+            color: #1dbf73;
+            text-decoration: none;
+        }
+        
         .filters {
             background: #2a2a2a;
             padding: 15px;
@@ -60,7 +120,7 @@
             margin-bottom: 10px;
         }
         
-        select, input {
+        select, input[type="number"] {
             flex: 1;
             padding: 10px;
             border: 1px solid #444;
@@ -205,6 +265,7 @@
             font-size: 13px;
             color: #b0b0b0;
             display: none;
+            white-space: pre-line;
         }
         
         .show-proposal {
@@ -224,6 +285,22 @@
             text-align: center;
             padding: 20px;
             color: #999;
+        }
+        
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .success {
+            background: #1dbf73;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -246,6 +323,20 @@
         </div>
     </div>
     
+    <div class="session-config">
+        <h3>🔑 Fiverr Session Key</h3>
+        <div class="session-input">
+            <input type="password" id="session-key" placeholder="Paste your Fiverr session cookie here...">
+            <button class="btn-fetch" onclick="fetchJobs()">Fetch Jobs</button>
+        </div>
+        <div class="help-text">
+            How to get it: F12 → Application → Cookies → fiverr.com → Copy session_id value
+            <br>Session expires after logout. Re-enter when needed.
+        </div>
+    </div>
+    
+    <div id="message-area"></div>
+    
     <div class="filters">
         <div class="filter-row">
             <select id="category-filter">
@@ -264,15 +355,18 @@
                 <option value="200+">€200+</option>
             </select>
         </div>
-        <button onclick="refreshJobs()">🔄 Refresh Jobs</button>
     </div>
     
     <div id="job-container" class="job-list">
-        <div class="loading">Loading jobs...</div>
+        <div class="empty-state">
+            👆 Enter your Fiverr session key above and click "Fetch Jobs" to see live buyer requests
+        </div>
     </div>
 
     <script>
-        // Mock data - will be replaced with API calls
+        let allJobs = [];
+        
+        // Mock data for demo (will be replaced by real scraping)
         const mockJobs = [
             {
                 id: 1,
@@ -282,9 +376,20 @@
                 description: "Need a clean, professional landing page for my plumbing business. Must be mobile-friendly. I have logo and photos ready.",
                 effort: 2,
                 clarity: 9,
+                score: 78,
                 posted: "2h ago",
                 tags: ["HTML", "CSS", "Responsive", "Quick Turnaround"],
-                url: "https://www.fiverr.com/buyer_requests"
+                url: "https://www.fiverr.com/buyer_requests",
+                proposal: `Hi! I can build your landing page with clean, mobile-responsive design. I'll deliver a professional site that loads fast and looks great on all devices.
+
+My approach:
+1. Design mockup based on your branding
+2. Build responsive HTML/CSS/JS
+3. Optimize for mobile and speed
+
+Price: €120 | Delivery: 48h
+
+Question: Do you need any specific features like contact forms or booking systems?`
             },
             {
                 id: 2,
@@ -294,9 +399,20 @@
                 description: "Extract product names, prices, and descriptions from competitor website. About 200 products. CSV output needed.",
                 effort: 1.5,
                 clarity: 8,
+                score: 74,
                 posted: "4h ago",
                 tags: ["Python", "Web Scraping", "Data Export"],
-                url: "https://www.fiverr.com/buyer_requests"
+                url: "https://www.fiverr.com/buyer_requests",
+                proposal: `Hi! I can extract that product data cleanly and reliably. I'll deliver a well-structured CSV with all requested fields.
+
+My approach:
+1. Build Python scraper with error handling
+2. Extract and validate all data
+3. Export to clean CSV format
+
+Price: €80 | Delivery: 36h
+
+Question: Do you need this as a one-time job or recurring updates?`
             },
             {
                 id: 3,
@@ -306,9 +422,20 @@
                 description: "Need 5 articles, 800 words each, about home workouts and nutrition. SEO optimized. Deadline: 1 week.",
                 effort: 3,
                 clarity: 7,
+                score: 76,
                 posted: "1h ago",
                 tags: ["Content Writing", "SEO", "Fitness"],
-                url: "https://www.fiverr.com/buyer_requests"
+                url: "https://www.fiverr.com/buyer_requests",
+                proposal: `Hi! I can create engaging, SEO-optimized fitness content that resonates with your audience.
+
+My approach:
+1. Research keywords and structure articles
+2. Write clear, actionable content
+3. Optimize for search and readability
+
+Price: €150 | Delivery: 72h
+
+Question: Do you have specific keywords or topics in mind for each article?`
             },
             {
                 id: 4,
@@ -318,91 +445,95 @@
                 description: "I'm an electrician and need a simple web app where I can input materials, labor hours, and get PDF quotes for clients.",
                 effort: 3,
                 clarity: 8,
+                score: 88,
                 posted: "30m ago",
                 tags: ["Web App", "Calculator", "PDF", "Business Tool"],
-                url: "https://www.fiverr.com/buyer_requests"
+                url: "https://www.fiverr.com/buyer_requests",
+                proposal: `Hi! I can build your quote calculator with clean interface and PDF export functionality.
+
+My approach:
+1. Design simple input form for materials/labor
+2. Build calculation logic with customizable rates
+3. Generate professional PDF quotes
+
+Price: €200 | Delivery: 72h
+
+Question: Do you need it to save quotes or just generate them on-demand?`
+            },
+            {
+                id: 5,
+                title: "Data Entry - 500 Contacts to Spreadsheet",
+                category: "data",
+                budget: 60,
+                description: "Copy contact information from business cards into Excel. Name, phone, email, company. Simple and straightforward.",
+                effort: 2,
+                clarity: 9,
+                score: 64,
+                posted: "6h ago",
+                tags: ["Data Entry", "Excel", "Quick Task"],
+                url: "https://www.fiverr.com/buyer_requests",
+                proposal: `Hi! I can handle this data entry work accurately and efficiently.
+
+My approach:
+1. Carefully transcribe all contact information
+2. Double-check for accuracy
+3. Deliver clean, organized spreadsheet
+
+Price: €60 | Delivery: 48h
+
+Question: Do you have the business cards as images or physical copies?`
             }
         ];
         
-        function calculateScore(job) {
-            let score = 0;
-            
-            // Budget scoring (0-40 points)
-            if (job.budget >= 150) score += 40;
-            else if (job.budget >= 100) score += 30;
-            else if (job.budget >= 50) score += 20;
-            
-            // Clarity scoring (0-30 points)
-            score += (job.clarity / 10) * 30;
-            
-            // Effort scoring (0-30 points) - less effort = more points
-            if (job.effort <= 2) score += 30;
-            else if (job.effort <= 3) score += 20;
-            else score += 10;
-            
-            return Math.round(score);
+        function showMessage(message, type = 'success') {
+            const area = document.getElementById('message-area');
+            area.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => area.innerHTML = '', 5000);
         }
         
-        function generateProposal(job) {
-            const proposals = {
-                website: `Hi! I can build your landing page with clean, mobile-responsive design. I'll deliver a professional site that loads fast and looks great on all devices.
-
-My approach:
-1. Design mockup based on your branding
-2. Build responsive HTML/CSS/JS
-3. Optimize for mobile and speed
-
-Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
-
-Question: Do you need any specific features like contact forms or booking systems?`,
-                
-                scraping: `Hi! I can extract that product data cleanly and reliably. I'll deliver a well-structured CSV with all requested fields.
-
-My approach:
-1. Build Python scraper with error handling
-2. Extract and validate all data
-3. Export to clean CSV format
-
-Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
-
-Question: Do you need this as a one-time job or recurring updates?`,
-                
-                writing: `Hi! I can create engaging, SEO-optimized fitness content that resonates with your audience.
-
-My approach:
-1. Research keywords and structure articles
-2. Write clear, actionable content
-3. Optimize for search and readability
-
-Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
-
-Question: Do you have specific keywords or topics in mind for each article?`,
-                
-                api: `Hi! I can integrate those services seamlessly and ensure reliable automation.
-
-My approach:
-1. Set up secure API connections
-2. Build error handling and logging
-3. Test thoroughly and document
-
-Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h
-
-Question: Do you have API credentials ready for both services?`
-            };
+        async function fetchJobs() {
+            const sessionKey = document.getElementById('session-key').value.trim();
             
-            return proposals[job.category] || `Hi! I can help with this project. Price: €${job.budget} | Delivery: ${Math.ceil(job.effort * 24)}h`;
+            if (!sessionKey) {
+                showMessage('⚠️ Please enter your Fiverr session key first', 'error');
+                return;
+            }
+            
+            const container = document.getElementById('job-container');
+            container.innerHTML = '<div class="loading">🔍 Scraping Fiverr buyer requests...</div>';
+            
+            // For now, use mock data (real scraping requires backend API)
+            // TODO: Replace with actual API call to backend scraper
+            setTimeout(() => {
+                allJobs = mockJobs;
+                showMessage(`✅ Found ${mockJobs.length} jobs! (Demo mode - showing example jobs)`, 'success');
+                renderJobs();
+            }, 1500);
+            
+            // Real implementation would be:
+            // try {
+            //     const response = await fetch('/api/scrape', {
+            //         method: 'POST',
+            //         headers: { 'Content-Type': 'application/json' },
+            //         body: JSON.stringify({ sessionKey })
+            //     });
+            //     const data = await response.json();
+            //     allJobs = data.jobs;
+            //     renderJobs();
+            // } catch (error) {
+            //     showMessage('❌ Error fetching jobs: ' + error.message, 'error');
+            // }
         }
         
         function renderJob(job) {
-            const score = calculateScore(job);
-            const scoreClass = score >= 70 ? 'high-score' : score >= 50 ? 'medium-score' : '';
-            const badgeClass = score >= 70 ? '' : score >= 50 ? 'medium' : 'low';
+            const scoreClass = job.score >= 70 ? 'high-score' : job.score >= 50 ? 'medium-score' : '';
+            const badgeClass = job.score >= 70 ? '' : job.score >= 50 ? 'medium' : 'low';
             
             return `
                 <div class="job-card ${scoreClass}">
                     <div class="job-header">
                         <div class="job-title">${job.title}</div>
-                        <div class="score-badge ${badgeClass}">${score}</div>
+                        <div class="score-badge ${badgeClass}">${job.score}</div>
                     </div>
                     <div class="job-meta">
                         <div class="meta-item">💰 €${job.budget}</div>
@@ -417,7 +548,7 @@ Question: Do you have API credentials ready for both services?`
                         📝 View Proposal Template
                     </div>
                     <div class="proposal-preview" id="proposal-${job.id}">
-                        ${generateProposal(job).replace(/\n/g, '<br>')}
+${job.proposal}
                     </div>
                     <div class="job-actions">
                         <a href="${job.url}" class="btn-apply" target="_blank">Apply on Fiverr</a>
@@ -435,25 +566,17 @@ Question: Do you have API credentials ready for both services?`
         function skipJob(jobId) {
             const job = document.querySelector(`[onclick="skipJob(${jobId})"]`).closest('.job-card');
             job.style.opacity = '0.3';
-            setTimeout(() => job.remove(), 300);
-            updateStats();
-        }
-        
-        function updateStats() {
-            const jobs = document.querySelectorAll('.job-card');
-            const highScore = Array.from(jobs).filter(j => j.classList.contains('high-score')).length;
-            const totalRevenue = mockJobs.reduce((sum, job) => sum + job.budget, 0);
-            
-            document.getElementById('total-jobs').textContent = jobs.length;
-            document.getElementById('high-score').textContent = highScore;
-            document.getElementById('potential-revenue').textContent = `€${totalRevenue}`;
+            setTimeout(() => {
+                allJobs = allJobs.filter(j => j.id !== jobId);
+                renderJobs();
+            }, 300);
         }
         
         function filterJobs() {
             const category = document.getElementById('category-filter').value;
             const budget = document.getElementById('budget-filter').value;
             
-            let filtered = mockJobs;
+            let filtered = allJobs;
             
             if (category !== 'all') {
                 filtered = filtered.filter(job => job.category === category);
@@ -465,35 +588,51 @@ Question: Do you have API credentials ready for both services?`
                 if (budget === '200+') filtered = filtered.filter(job => job.budget >= 200);
             }
             
-            // Sort by score
-            filtered.sort((a, b) => calculateScore(b) - calculateScore(a));
+            // Sort by score descending
+            filtered.sort((a, b) => b.score - a.score);
             
             return filtered;
         }
         
-        function refreshJobs() {
-            const container = document.getElementById('job-container');
-            container.innerHTML = '<div class="loading">Refreshing...</div>';
+        function updateStats() {
+            const filtered = filterJobs();
+            const highScore = filtered.filter(j => j.score >= 70).length;
+            const totalRevenue = filtered.reduce((sum, job) => sum + job.budget, 0);
             
-            setTimeout(() => {
-                const filtered = filterJobs();
-                
-                if (filtered.length === 0) {
-                    container.innerHTML = '<div class="empty-state">No jobs match your filters</div>';
-                } else {
-                    container.innerHTML = filtered.map(renderJob).join('');
-                }
-                
-                updateStats();
-            }, 500);
+            document.getElementById('total-jobs').textContent = filtered.length;
+            document.getElementById('high-score').textContent = highScore;
+            document.getElementById('potential-revenue').textContent = `€${totalRevenue}`;
+        }
+        
+        function renderJobs() {
+            const container = document.getElementById('job-container');
+            const filtered = filterJobs();
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">No jobs match your filters</div>';
+            } else {
+                container.innerHTML = filtered.map(renderJob).join('');
+            }
+            
+            updateStats();
         }
         
         // Event listeners
-        document.getElementById('category-filter').addEventListener('change', refreshJobs);
-        document.getElementById('budget-filter').addEventListener('change', refreshJobs);
+        document.getElementById('category-filter').addEventListener('change', renderJobs);
+        document.getElementById('budget-filter').addEventListener('change', renderJobs);
         
-        // Initial load
-        refreshJobs();
+        // Save session key to localStorage
+        document.getElementById('session-key').addEventListener('input', (e) => {
+            localStorage.setItem('fiverr_session', e.target.value);
+        });
+        
+        // Load saved session key
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('fiverr_session');
+            if (saved) {
+                document.getElementById('session-key').value = saved;
+            }
+        });
     </script>
 </body>
 </html>
