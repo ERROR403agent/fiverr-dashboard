@@ -25,6 +25,11 @@ def serve_landing(page_name):
     """Serve landing pages"""
     return send_from_directory('landing-pages', f'{page_name}.html')
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files (avatars, etc)"""
+    return send_from_directory('static', filename)
+
 JOBS_FILE = 'jobs_db.json'
 
 # Store API keys (in production, use environment variables)
