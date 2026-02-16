@@ -1,163 +1,284 @@
 #!/usr/bin/env python3
 """
-EXEC Trading Dashboard - Live Data API
-Fetches wallet data from Base chain via RPC
+EXEC Trading Dashboard API
+Real-time wallet monitoring, trade history, P&L tracking
 """
-from flask import Flask, jsonify
-from web3 import Web3
+
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import requests
 import json
+import time
 from datetime import datetime
 
 app = Flask(__name__)
+CORS(app)
 
-# Base mainnet RPC
-w3 = Web3(Web3.HTTPProvider('https://mainnet.base.org'))
+# Configuration
+BASESCAN_API_KEY = "JMN38XVG9CUIPKDGWF7EYZD7J99VVY874C"
+EXEC_WALLET = "0x47ffc880cfF2e8F18fD9567faB5a1fBD217B5552"
+BASE_CHAIN_ID = 8453
+STARTING_CAPITAL_USD = 114.00  # Original capital
+ETH_STARTING_PRICE = 3000  # Will be updated
 
-# EXEC wallet
-WALLET = Web3.to_checksum_address('0x47ffc880cfF2e8F18fD9567faB5a1fBD217B5552')
+# Cache to avoid API rate limits
+cache = {
+    'balance': {'data': None, 'timestamp': 0, 'ttl': 30},
+    'txlist': {'data': None, 'timestamp': 0, 'ttl': 60},
+    'eth_price': {'data': None, 'timestamp': 0, 'ttl': 300}
+}
 
-# Token contracts
-USDC = Web3.to_checksum_address('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
-WETH = Web3.to_checksum_address('0x4200000000000000000000000000000000000006')
-AERO = Web3.to_checksum_address('0x940181a94a35a4569e4529a3cdfb74e38fd98631')
+def get_cached(key):
+    """Get cached data if still valid"""
+    if cache[key]['data'] and time.time() - cache[key]['timestamp'] < cache[key]['ttl']:
+        return cache[key]['data']
+    return None
 
-# ERC20 ABI (balanceOf)
-ERC20_ABI = json.loads('[{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]')
+def set_cache(key, data):
+    """Set cache with timestamp"""
+    cache[key]['data'] = data
+    cache[key]['timestamp'] = time.time()
 
-ETH_PRICE = 1943.16  # Could fetch from price oracle in production
-
-@app.route('/api/position')
-def get_position():
-    """Get current wallet position"""
-    try:
-        # Get native ETH
-        eth_balance = w3.eth.get_balance(WALLET)
-        eth_amount = float(w3.from_wei(eth_balance, 'ether'))
-        
-        # Get WETH
-        weth_contract = w3.eth.contract(address=WETH, abi=ERC20_ABI)
-        weth_balance = weth_contract.functions.balanceOf(WALLET).call()
-        weth_amount = float(w3.from_wei(weth_balance, 'ether'))
-        
-        # Get USDC
-        usdc_contract = w3.eth.contract(address=USDC, abi=ERC20_ABI)
-        usdc_balance = usdc_contract.functions.balanceOf(WALLET).call()
-        usdc_amount = usdc_balance / 1e6
-        
-        # Get AERO
-        aero_contract = w3.eth.contract(address=AERO, abi=ERC20_ABI)
-        aero_balance = aero_contract.functions.balanceOf(WALLET).call()
-        aero_amount = float(w3.from_wei(aero_balance, 'ether'))
-        
-        # Calculate values
-        eth_value = eth_amount * ETH_PRICE
-        weth_value = weth_amount * ETH_PRICE
-        usdc_value = usdc_amount
-        aero_value = aero_amount * 0.30  # AERO ~$0.30
-        
-        total_value = eth_value + weth_value + usdc_value + aero_value
-        
-        # Calculate tradeable (excluding gas reserve)
-        gas_reserve = 0.002
-        tradeable_eth = max(0, eth_amount - gas_reserve)
-        total_tradeable = (tradeable_eth * ETH_PRICE) + weth_value + usdc_value + aero_value
-        
-        # P&L calculation
-        starting_capital = 74.12  # Starting value
-        pnl = total_value - starting_capital
-        pnl_percent = (pnl / starting_capital) * 100
-        
-        return jsonify({
-            'success': True,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'position': {
-                'eth': {
-                    'amount': eth_amount,
-                    'value': eth_value
-                },
-                'weth': {
-                    'amount': weth_amount,
-                    'value': weth_value
-                },
-                'usdc': {
-                    'amount': usdc_amount,
-                    'value': usdc_value
-                },
-                'aero': {
-                    'amount': aero_amount,
-                    'value': aero_value
-                }
-            },
-            'total': {
-                'value': total_value,
-                'tradeable': total_tradeable,
-                'gas_reserve': gas_reserve * ETH_PRICE
-            },
-            'pnl': {
-                'amount': pnl,
-                'percent': pnl_percent,
-                'starting_capital': starting_capital
-            },
-            'prices': {
-                'eth': ETH_PRICE,
-                'aero': 0.30
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@app.route('/api/trades')
-def get_trades():
-    """Get trade history"""
-    # Hardcoded for now - could fetch from Basescan API
-    trades = [
-        {
-            'id': 1,
-            'type': 'ETH → USDC',
-            'amount_in': '0.014457 ETH',
-            'amount_out': '27.92 USDC',
-            'value': 28.09,
-            'timestamp': '2026-02-15T20:02:00Z',
-            'tx_hash': '0x20cbb01f9c6ed3d8dd3c18e5904de24e6113bdecb129fdc6ccc5cbc5367f434f',
-            'platform': 'BaseSwap',
-            'reasoning': 'Pivoted from AERO (routing issues). Swapped to USDC for liquidity.'
-        },
-        {
-            'id': 2,
-            'type': 'USDC → WETH',
-            'amount_in': '27.92 USDC',
-            'amount_out': '0.014182 WETH',
-            'value': 27.56,
-            'timestamp': '2026-02-16T04:02:00Z',
-            'tx_hash': '0xb6065d2e865eaa974e2a753530b0793fb08f0f16f841ea080e5475f8739de125',
-            'platform': 'BaseSwap',
-            'reasoning': 'Active trading mode. Deployed 100% of USDC holdings.'
-        }
-    ]
+@app.route('/api/wallet', methods=['GET'])
+def get_wallet():
+    """Get current wallet balance (ETH + tokens)"""
+    cached = get_cached('balance')
+    if cached:
+        return jsonify(cached)
     
-    return jsonify({
-        'success': True,
-        'trades': trades,
-        'total_trades': len(trades)
-    })
+    try:
+        # Get ETH balance (using simple endpoint, no v2 issues)
+        response = requests.get(
+            f"https://api.basescan.org/api",
+            params={
+                'module': 'account',
+                'action': 'balance',
+                'address': EXEC_WALLET,
+                'tag': 'latest',
+                'apikey': BASESCAN_API_KEY
+            },
+            timeout=10
+        )
+        
+        data = response.json()
+        
+        if data['status'] == '1':
+            wei_balance = int(data['result'])
+            eth_balance = wei_balance / 1e18
+            
+            # Get ETH price
+            eth_price = get_eth_price()
+            usd_value = eth_balance * eth_price
+            
+            result = {
+                'address': EXEC_WALLET,
+                'eth_balance': eth_balance,
+                'eth_price': eth_price,
+                'usd_value': usd_value,
+                'timestamp': int(time.time()),
+                'chain': 'Base',
+                'chain_id': BASE_CHAIN_ID
+            }
+            
+            set_cache('balance', result)
+            return jsonify(result)
+        else:
+            return jsonify({'error': data.get('message', 'API error'), 'status': 'error'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
-@app.route('/api/stats')
-def get_stats():
-    """Get trading statistics"""
-    return jsonify({
-        'success': True,
-        'stats': {
-            'total_trades': 2,
-            'trades_today': 2,
-            'win_rate': 0,  # Too early to calculate
-            'avg_hold_time': '8 hours',
-            'gas_spent': 0.0013,
-            'days_active': 1
+@app.route('/api/trades', methods=['GET'])
+def get_trades():
+    """Get transaction history and parse trades"""
+    cached = get_cached('txlist')
+    if cached:
+        return jsonify(cached)
+    
+    try:
+        # Get normal transactions
+        response = requests.get(
+            f"https://api.basescan.org/api",
+            params={
+                'module': 'account',
+                'action': 'txlist',
+                'address': EXEC_WALLET,
+                'startblock': 0,
+                'endblock': 99999999,
+                'page': 1,
+                'offset': 100,
+                'sort': 'desc',
+                'apikey': BASESCAN_API_KEY
+            },
+            timeout=10
+        )
+        
+        data = response.json()
+        
+        if data['status'] == '1':
+            transactions = data['result']
+            
+            # Parse into trades
+            trades = []
+            for tx in transactions:
+                trade = {
+                    'hash': tx['hash'],
+                    'timestamp': int(tx['timeStamp']),
+                    'date': datetime.fromtimestamp(int(tx['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S'),
+                    'from': tx['from'],
+                    'to': tx['to'],
+                    'value_eth': float(tx['value']) / 1e18,
+                    'gas_used': int(tx['gasUsed']),
+                    'gas_price_gwei': float(tx['gasPrice']) / 1e9,
+                    'success': tx['isError'] == '0',
+                    'block': int(tx['blockNumber'])
+                }
+                
+                # Calculate gas cost in ETH
+                trade['gas_cost_eth'] = (trade['gas_used'] * float(tx['gasPrice'])) / 1e18
+                
+                # Classify transaction type
+                if tx['from'].lower() == EXEC_WALLET.lower():
+                    trade['type'] = 'outgoing'
+                elif tx['to'].lower() == EXEC_WALLET.lower():
+                    trade['type'] = 'incoming'
+                else:
+                    trade['type'] = 'contract'
+                
+                trades.append(trade)
+            
+            result = {
+                'trades': trades,
+                'count': len(trades),
+                'timestamp': int(time.time())
+            }
+            
+            set_cache('txlist', result)
+            return jsonify(result)
+        else:
+            return jsonify({'error': data.get('message', 'API error'), 'status': 'error'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
+@app.route('/api/pnl', methods=['GET'])
+def get_pnl():
+    """Calculate profit/loss from starting capital"""
+    try:
+        wallet_data = get_wallet().json
+        if 'error' in wallet_data:
+            return jsonify(wallet_data), 500
+        
+        current_usd = wallet_data['usd_value']
+        pnl_usd = current_usd - STARTING_CAPITAL_USD
+        pnl_percent = (pnl_usd / STARTING_CAPITAL_USD) * 100
+        
+        result = {
+            'starting_capital_usd': STARTING_CAPITAL_USD,
+            'current_value_usd': current_usd,
+            'pnl_usd': pnl_usd,
+            'pnl_percent': pnl_percent,
+            'timestamp': int(time.time())
         }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 500
+
+@app.route('/api/comments', methods=['GET', 'POST'])
+def handle_comments():
+    """Store and retrieve dashboard comments"""
+    COMMENTS_FILE = 'exec_comments.json'
+    
+    if request.method == 'GET':
+        try:
+            if os.path.exists(COMMENTS_FILE):
+                with open(COMMENTS_FILE, 'r') as f:
+                    comments = json.load(f)
+            else:
+                comments = []
+            
+            return jsonify({'comments': comments, 'count': len(comments)})
+        except Exception as e:
+            return jsonify({'error': str(e), 'status': 'error'}), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.json
+            author = data.get('author', 'Anonymous')
+            content = data.get('content', '')
+            
+            # Basic prompt injection protection
+            forbidden_patterns = [
+                'ignore', 'disregard', 'forget', 'system:', 'assistant:',
+                'prompt:', '<script>', 'javascript:', 'eval('
+            ]
+            
+            content_lower = content.lower()
+            for pattern in forbidden_patterns:
+                if pattern in content_lower:
+                    return jsonify({'error': 'Invalid content', 'status': 'error'}), 400
+            
+            # Load existing comments
+            if os.path.exists(COMMENTS_FILE):
+                with open(COMMENTS_FILE, 'r') as f:
+                    comments = json.load(f)
+            else:
+                comments = []
+            
+            # Add new comment
+            comment = {
+                'id': len(comments) + 1,
+                'author': author[:50],  # Limit author name length
+                'content': content[:500],  # Limit content length
+                'timestamp': int(time.time()),
+                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            comments.append(comment)
+            
+            # Save
+            with open(COMMENTS_FILE, 'w') as f:
+                json.dump(comments, f, indent=2)
+            
+            return jsonify({'status': 'success', 'comment': comment})
+            
+        except Exception as e:
+            return jsonify({'error': str(e), 'status': 'error'}), 500
+
+def get_eth_price():
+    """Get current ETH price in USD"""
+    cached = get_cached('eth_price')
+    if cached:
+        return cached
+    
+    try:
+        # Use CoinGecko free API
+        response = requests.get(
+            'https://api.coingecko.com/api/v3/simple/price',
+            params={'ids': 'ethereum', 'vs_currencies': 'usd'},
+            timeout=5
+        )
+        data = response.json()
+        price = data['ethereum']['usd']
+        
+        set_cache('eth_price', price)
+        return price
+    except:
+        # Fallback to approximate price
+        return 3000.0
+
+@app.route('/api/status', methods=['GET'])
+def status():
+    """Health check"""
+    return jsonify({
+        'status': 'online',
+        'wallet': EXEC_WALLET,
+        'chain': 'Base',
+        'timestamp': int(time.time())
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    import os
+    app.run(host='0.0.0.0', port=5002, debug=True)
